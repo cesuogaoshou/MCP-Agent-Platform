@@ -16,6 +16,17 @@ class FakeSearchProvider:
         ]
 
 
+class FakeDictSearchProvider:
+    async def search(self, query: str, top_k: int, language: str) -> list[dict[str, str]]:
+        return [
+            {
+                "title": "Dict Result",
+                "url": "https://example.com/dict",
+                "snippet": "Dict snippet",
+            }
+        ]
+
+
 @pytest.mark.anyio
 async def test_web_search_server_lists_tool_schema() -> None:
     server = create_server(FakeSearchProvider())
@@ -48,6 +59,45 @@ async def test_web_search_server_lists_tool_schema() -> None:
                     },
                 }
             ]
+        },
+    }
+
+
+@pytest.mark.anyio
+async def test_web_search_server_accepts_dict_results_from_provider() -> None:
+    server = create_server(FakeDictSearchProvider())
+
+    response = await server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "web_search",
+                "arguments": {"query": "anything"},
+            },
+        }
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 3,
+        "result": {
+            "content": [
+                {
+                    "type": "json",
+                    "json": {
+                        "results": [
+                            {
+                                "title": "Dict Result",
+                                "url": "https://example.com/dict",
+                                "snippet": "Dict snippet",
+                            }
+                        ]
+                    },
+                }
+            ],
+            "isError": False,
         },
     }
 

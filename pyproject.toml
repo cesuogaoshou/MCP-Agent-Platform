@@ -1,0 +1,19 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["mcp_agent_platform", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "B",
+    "UP",
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

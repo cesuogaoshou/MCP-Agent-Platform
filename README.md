@@ -41,6 +41,13 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -v
 ```
 
+运行 Ruff 检查：
+
+```powershell
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m ruff format --check .
+```
+
 启动开发服务：
 
 ```powershell

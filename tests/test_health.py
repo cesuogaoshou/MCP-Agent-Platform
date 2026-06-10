@@ -1,5 +1,4 @@
 from fastapi.testclient import TestClient
-
 from mcp_agent_platform.gateway.app import create_app
 
 

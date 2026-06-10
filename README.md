@@ -4,10 +4,7 @@ MCP-native Agent 工具调用平台。项目目标是先实现一个简单可运
 
 ## 文档
 
-- [开发规格](MCP-Agent-Platform-Dev-Spec.md)
-- [落地路线图](MCP-Agent-Platform-Roadmap.md)
-- [面试与简历指南](MCP-Agent-Platform-Interview-Guide.md)
-- [文档入口](MCP-Agent-Platform-Spec.md)
+详细规划文档放在本地 `docs/` 目录中，用于个人开发和面试准备。该目录已加入 `.gitignore`，不会上传到 GitHub。
 
 ## 当前阶段
 

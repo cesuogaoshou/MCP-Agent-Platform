@@ -7,6 +7,9 @@ __pycache__/
 .mypy_cache/
 .coverage
 htmlcov/
+build/
+dist/
+*.egg-info/
 
 # Virtual environments
 .venv/
@@ -16,6 +19,8 @@ env/
 # Environment files
 .env
 .env.local
+.env.*
+!.env.example
 
 # IDE / OS
 .idea/
@@ -28,3 +33,5 @@ data/
 workspace/
 logs/
 
+# Local-only planning docs
+docs/

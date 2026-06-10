@@ -59,3 +59,27 @@ python -m venv .venv
 ```powershell
 curl http://127.0.0.1:8000/health
 ```
+
+MCP stdio 协议自检：
+
+```powershell
+@'
+import asyncio
+import sys
+
+from mcp_agent_platform.mcp.client import StdioMCPClient
+
+
+async def main():
+    client = StdioMCPClient([sys.executable, "-m", "mcp_agent_platform.tools.echo_server"])
+    await client.start()
+    try:
+        print(await client.request("tools/list", {}))
+        print(await client.request("tools/call", {"name": "echo", "arguments": {"text": "hello"}}))
+    finally:
+        await client.close()
+
+
+asyncio.run(main())
+'@ | .\.venv\Scripts\python.exe -
+```

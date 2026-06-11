@@ -1,10 +1,14 @@
 import asyncio
+import os
 from dataclasses import asdict, dataclass, is_dataclass
 from typing import Any, Protocol
 
 from mcp_agent_platform.mcp.server import BaseMCPServer, Tool
 from mcp_agent_platform.mcp.transport.stdio import run_stdio_server
-from mcp_agent_platform.tools.search_providers import DuckDuckGoLiteSearchProvider
+from mcp_agent_platform.tools.search_providers import (
+    DuckDuckGoLiteSearchProvider,
+    FakeSearchProvider,
+)
 
 
 @dataclass(frozen=True)
@@ -63,7 +67,13 @@ def create_server(provider: SearchProvider | None = None) -> BaseMCPServer:
 
 
 def main() -> None:
-    asyncio.run(run_stdio_server(create_server()))
+    asyncio.run(run_stdio_server(create_server(_provider_from_environment())))
+
+
+def _provider_from_environment() -> SearchProvider:
+    if os.getenv("MCP_AGENT_SEARCH_PROVIDER") == "fake":
+        return FakeSearchProvider()
+    return DuckDuckGoLiteSearchProvider()
 
 
 def _serialize_result(result: Any) -> dict[str, str]:

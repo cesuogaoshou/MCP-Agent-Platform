@@ -1,6 +1,6 @@
 from html.parser import HTMLParser
 from typing import Any
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 import httpx
 
@@ -17,6 +17,17 @@ class DuckDuckGoLiteSearchProvider:
         )
         response.raise_for_status()
         return _parse_duckduckgo_results(response.text)[:top_k]
+
+
+class FakeSearchProvider:
+    async def search(self, query: str, top_k: int, language: str) -> list[dict[str, str]]:
+        return [
+            {
+                "title": f"Fake result for {query}",
+                "url": f"https://example.com/search?q={quote(query)}",
+                "snippet": "This is a deterministic fake search result.",
+            }
+        ][:top_k]
 
 
 def _duckduckgo_region(language: str) -> str:

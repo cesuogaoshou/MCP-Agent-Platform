@@ -83,3 +83,29 @@ async def main():
 asyncio.run(main())
 '@ | .\.venv\Scripts\python.exe -
 ```
+
+Web search MCP Server 自检（使用 fake provider，不访问网络）：
+
+```powershell
+$env:MCP_AGENT_SEARCH_PROVIDER = "fake"
+@'
+import asyncio
+import sys
+
+from mcp_agent_platform.mcp.client import StdioMCPClient
+
+
+async def main():
+    client = StdioMCPClient([sys.executable, "-m", "mcp_agent_platform.tools.web_search_server"])
+    await client.start()
+    try:
+        print(await client.request("tools/list", {}))
+        print(await client.request("tools/call", {"name": "web_search", "arguments": {"query": "mcp protocol", "top_k": 1}}))
+    finally:
+        await client.close()
+
+
+asyncio.run(main())
+'@ | .\.venv\Scripts\python.exe -
+Remove-Item Env:\MCP_AGENT_SEARCH_PROVIDER
+```

@@ -28,8 +28,14 @@ def create_server(provider: SearchProvider | None = None) -> BaseMCPServer:
     provider = provider or DuckDuckGoLiteSearchProvider()
 
     async def web_search(arguments: dict[str, Any]) -> dict[str, Any]:
-        query = arguments["query"]
+        query = str(arguments.get("query") or "").strip()
+        if not query:
+            raise ValueError("Missing required argument: query")
+
         top_k = int(arguments.get("top_k", 5))
+        if top_k < 1:
+            raise ValueError("top_k must be greater than 0")
+
         language = str(arguments.get("language", "zh-CN"))
         results = await provider.search(query=query, top_k=top_k, language=language)
         return {"results": [_serialize_result(result) for result in results]}

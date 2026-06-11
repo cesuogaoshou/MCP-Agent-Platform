@@ -27,6 +27,11 @@ class FakeDictSearchProvider:
         ]
 
 
+class FailingSearchProvider:
+    async def search(self, query: str, top_k: int, language: str) -> list[dict[str, str]]:
+        raise RuntimeError("search backend unavailable")
+
+
 @pytest.mark.anyio
 async def test_web_search_server_lists_tool_schema() -> None:
     server = create_server(FakeSearchProvider())
@@ -141,5 +146,67 @@ async def test_web_search_server_calls_provider() -> None:
                 }
             ],
             "isError": False,
+        },
+    }
+
+
+@pytest.mark.anyio
+async def test_web_search_server_returns_tool_error_for_missing_query() -> None:
+    server = create_server(FakeDictSearchProvider())
+
+    response = await server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "web_search",
+                "arguments": {},
+            },
+        }
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "Missing required argument: query",
+                }
+            ],
+            "isError": True,
+        },
+    }
+
+
+@pytest.mark.anyio
+async def test_web_search_server_returns_tool_error_when_provider_fails() -> None:
+    server = create_server(FailingSearchProvider())
+
+    response = await server.handle_message(
+        {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+                "name": "web_search",
+                "arguments": {"query": "mcp protocol"},
+            },
+        }
+    )
+
+    assert response == {
+        "jsonrpc": "2.0",
+        "id": 5,
+        "result": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": "search backend unavailable",
+                }
+            ],
+            "isError": True,
         },
     }

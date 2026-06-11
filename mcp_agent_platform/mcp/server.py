@@ -77,7 +77,19 @@ class BaseMCPServer:
                 "isError": True,
             }
 
-        result = await self._tools[tool_name].handler(arguments)
+        try:
+            result = await self._tools[tool_name].handler(arguments)
+        except Exception as exc:
+            return {
+                "content": [
+                    {
+                        "type": "text",
+                        "text": str(exc),
+                    }
+                ],
+                "isError": True,
+            }
+
         return {
             "content": [
                 {

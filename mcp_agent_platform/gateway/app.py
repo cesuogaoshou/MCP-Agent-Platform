@@ -1,9 +1,12 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any, Protocol
 
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, field_validator
 
 from mcp_agent_platform.config.settings import get_settings
+from mcp_agent_platform.gateway.runtime import create_default_agent
 
 
 class AgentLike(Protocol):
@@ -29,9 +32,31 @@ class ChatResponse(BaseModel):
     tool_result: dict[str, Any] | None = None
 
 
-def create_app(agent: AgentLike | None = None) -> FastAPI:
+def create_app(agent: AgentLike | None = None, enable_runtime: bool = False) -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="MCP Agent Platform", version=settings.version)
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        runtime_registry = None
+        if enable_runtime and agent is None:
+            runtime_agent, runtime_registry = create_default_agent()
+            await runtime_registry.start()
+            app.state.agent = runtime_agent
+        else:
+            app.state.agent = agent
+
+        try:
+            yield
+        finally:
+            if runtime_registry is not None:
+                await runtime_registry.close()
+
+    app = FastAPI(
+        title="MCP Agent Platform",
+        version=settings.version,
+        lifespan=lifespan,
+    )
+    app.state.agent = agent
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -43,10 +68,11 @@ def create_app(agent: AgentLike | None = None) -> FastAPI:
 
     @app.post("/chat")
     async def chat(request: ChatRequest) -> ChatResponse:
-        if agent is None:
+        current_agent = app.state.agent
+        if current_agent is None:
             raise HTTPException(status_code=503, detail="Agent is not configured")
 
-        result = await agent.run(request.message)
+        result = await current_agent.run(request.message)
         return ChatResponse(
             answer=result.final_answer,
             tool_name=result.tool_name,
@@ -57,4 +83,4 @@ def create_app(agent: AgentLike | None = None) -> FastAPI:
     return app
 
 
-app = create_app()
+app = create_app(enable_runtime=True)

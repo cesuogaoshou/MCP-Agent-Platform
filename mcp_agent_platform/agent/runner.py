@@ -15,12 +15,27 @@ class ToolCall:
 
 
 @dataclass(frozen=True)
+class AgentEvent:
+    type: str
+    message: str
+    data: dict[str, Any] | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "type": self.type,
+            "message": self.message,
+            "data": self.data or {},
+        }
+
+
+@dataclass(frozen=True)
 class AgentRunResult:
     user_input: str
     final_answer: str
     tool_name: str | None = None
     tool_arguments: dict[str, Any] | None = None
     tool_result: dict[str, Any] | None = None
+    events: list[AgentEvent] | None = None
 
 
 class CommandPlanner:
@@ -51,18 +66,50 @@ class ToolCallingAgent:
     async def run(self, user_input: str) -> AgentRunResult:
         tool_call = self._planner.plan(user_input)
         if tool_call is None:
+            final_answer = "No matching tool command found."
             return AgentRunResult(
                 user_input=user_input,
-                final_answer="No matching tool command found.",
+                final_answer=final_answer,
+                events=[
+                    AgentEvent(
+                        type="answer",
+                        message=final_answer,
+                        data={"answer": final_answer},
+                    )
+                ],
             )
 
         tool_result = await self._registry.call_tool(tool_call.name, tool_call.arguments)
+        final_answer = _tool_result_to_text(tool_result)
         return AgentRunResult(
             user_input=user_input,
-            final_answer=_tool_result_to_text(tool_result),
+            final_answer=final_answer,
             tool_name=tool_call.name,
             tool_arguments=tool_call.arguments,
             tool_result=tool_result,
+            events=[
+                AgentEvent(
+                    type="action",
+                    message=f"Calling tool: {tool_call.name}",
+                    data={
+                        "tool_name": tool_call.name,
+                        "tool_arguments": tool_call.arguments,
+                    },
+                ),
+                AgentEvent(
+                    type="observation",
+                    message="Tool call completed",
+                    data={
+                        "tool_name": tool_call.name,
+                        "tool_result": tool_result,
+                    },
+                ),
+                AgentEvent(
+                    type="answer",
+                    message="Final answer generated",
+                    data={"answer": final_answer},
+                ),
+            ],
         )
 
 

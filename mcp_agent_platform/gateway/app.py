@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Protocol
 
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from mcp_agent_platform.config.settings import get_settings
 from mcp_agent_platform.gateway.runtime import create_default_agent
@@ -35,6 +35,7 @@ class ChatResponse(BaseModel):
     tool_name: str | None = None
     tool_arguments: dict[str, Any] | None = None
     tool_result: dict[str, Any] | None = None
+    events: list[dict[str, Any]] = Field(default_factory=list)
 
 
 def create_app(
@@ -90,6 +91,7 @@ def create_app(
             tool_name=result.tool_name,
             tool_arguments=result.tool_arguments,
             tool_result=result.tool_result,
+            events=[event.as_dict() for event in result.events or []],
         )
 
     @app.get("/tools")

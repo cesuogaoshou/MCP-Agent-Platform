@@ -1,5 +1,5 @@
 from fastapi.testclient import TestClient
-from mcp_agent_platform.agent.runner import AgentRunResult
+from mcp_agent_platform.agent.runner import AgentEvent, AgentRunResult
 from mcp_agent_platform.gateway.app import create_app
 
 
@@ -19,6 +19,21 @@ def test_chat_endpoint_runs_configured_agent() -> None:
             "content": [{"type": "json", "json": {"echo": "hello"}}],
             "isError": False,
         },
+        "events": [
+            {
+                "type": "action",
+                "message": "Calling tool: echo",
+                "data": {
+                    "tool_name": "echo",
+                    "tool_arguments": {"text": "hello"},
+                },
+            },
+            {
+                "type": "answer",
+                "message": "Final answer generated",
+                "data": {"answer": '{"echo": "hello"}'},
+            },
+        ],
     }
 
 
@@ -45,4 +60,19 @@ class FakeAgent:
                 "content": [{"type": "json", "json": {"echo": "hello"}}],
                 "isError": False,
             },
+            events=[
+                AgentEvent(
+                    type="action",
+                    message="Calling tool: echo",
+                    data={
+                        "tool_name": "echo",
+                        "tool_arguments": {"text": "hello"},
+                    },
+                ),
+                AgentEvent(
+                    type="answer",
+                    message="Final answer generated",
+                    data={"answer": '{"echo": "hello"}'},
+                ),
+            ],
         )

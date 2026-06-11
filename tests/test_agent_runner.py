@@ -23,6 +23,32 @@ async def test_agent_routes_echo_command_to_echo_tool() -> None:
     assert result.tool_name == "echo"
     assert result.tool_arguments == {"text": "hello"}
     assert result.final_answer == json.dumps({"echo": "hello"}, ensure_ascii=False)
+    assert [event.as_dict() for event in result.events] == [
+        {
+            "type": "action",
+            "message": "Calling tool: echo",
+            "data": {
+                "tool_name": "echo",
+                "tool_arguments": {"text": "hello"},
+            },
+        },
+        {
+            "type": "observation",
+            "message": "Tool call completed",
+            "data": {
+                "tool_name": "echo",
+                "tool_result": {
+                    "content": [{"type": "json", "json": {"echo": "hello"}}],
+                    "isError": False,
+                },
+            },
+        },
+        {
+            "type": "answer",
+            "message": "Final answer generated",
+            "data": {"answer": json.dumps({"echo": "hello"}, ensure_ascii=False)},
+        },
+    ]
 
 
 @pytest.mark.anyio
@@ -78,6 +104,13 @@ async def test_agent_returns_direct_answer_when_no_tool_matches() -> None:
     assert registry.calls == []
     assert result.tool_name is None
     assert result.final_answer == "No matching tool command found."
+    assert [event.as_dict() for event in result.events] == [
+        {
+            "type": "answer",
+            "message": "No matching tool command found.",
+            "data": {"answer": "No matching tool command found."},
+        }
+    ]
 
 
 class FakeRegistry:

@@ -88,6 +88,9 @@ Remove-Item Env:\MCP_AGENT_SEARCH_PROVIDER
 - `/echo <text>`：调用 `echo` 工具。
 - `/search <query>`：调用 `web_search` 工具。
 
+`/chat` 响应会返回 `answer`、工具调用信息和 `events`。`events` 当前包含
+`action`、`observation`、`answer`，后续 Web UI 和 SSE 会基于这些事件展示执行过程。
+
 MCP stdio 协议自检：
 
 ```powershell

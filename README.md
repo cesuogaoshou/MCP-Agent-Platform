@@ -59,6 +59,12 @@ python -m venv .venv
 curl http://127.0.0.1:8000/health
 ```
 
+查看已注册工具：
+
+```powershell
+curl http://127.0.0.1:8000/tools
+```
+
 调用 Agent：
 
 ```powershell

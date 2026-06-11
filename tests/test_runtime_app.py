@@ -11,3 +11,13 @@ def test_runtime_app_chat_calls_echo_tool(monkeypatch) -> None:
     assert response.status_code == 200
     assert response.json()["answer"] == '{"echo": "hello"}'
     assert response.json()["tool_name"] == "echo"
+
+
+def test_runtime_app_lists_registered_tools(monkeypatch) -> None:
+    monkeypatch.setenv("MCP_AGENT_SEARCH_PROVIDER", "fake")
+
+    with TestClient(create_app(enable_runtime=True)) as client:
+        response = client.get("/tools")
+
+    assert response.status_code == 200
+    assert [tool["name"] for tool in response.json()["tools"]] == ["echo", "web_search"]

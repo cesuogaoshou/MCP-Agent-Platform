@@ -14,6 +14,11 @@ class AgentLike(Protocol):
         """Run an agent turn for a user input."""
 
 
+class ToolRegistryLike(Protocol):
+    async def list_tools(self) -> list[dict[str, Any]]:
+        """List registered tools."""
+
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -32,7 +37,11 @@ class ChatResponse(BaseModel):
     tool_result: dict[str, Any] | None = None
 
 
-def create_app(agent: AgentLike | None = None, enable_runtime: bool = False) -> FastAPI:
+def create_app(
+    agent: AgentLike | None = None,
+    registry: ToolRegistryLike | None = None,
+    enable_runtime: bool = False,
+) -> FastAPI:
     settings = get_settings()
 
     @asynccontextmanager
@@ -42,8 +51,10 @@ def create_app(agent: AgentLike | None = None, enable_runtime: bool = False) -> 
             runtime_agent, runtime_registry = create_default_agent()
             await runtime_registry.start()
             app.state.agent = runtime_agent
+            app.state.registry = runtime_registry
         else:
             app.state.agent = agent
+            app.state.registry = registry
 
         try:
             yield
@@ -57,6 +68,7 @@ def create_app(agent: AgentLike | None = None, enable_runtime: bool = False) -> 
         lifespan=lifespan,
     )
     app.state.agent = agent
+    app.state.registry = registry
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -79,6 +91,14 @@ def create_app(agent: AgentLike | None = None, enable_runtime: bool = False) -> 
             tool_arguments=result.tool_arguments,
             tool_result=result.tool_result,
         )
+
+    @app.get("/tools")
+    async def tools() -> dict[str, list[dict[str, Any]]]:
+        current_registry = app.state.registry
+        if current_registry is None:
+            raise HTTPException(status_code=503, detail="Tool registry is not configured")
+
+        return {"tools": await current_registry.list_tools()}
 
     return app
 

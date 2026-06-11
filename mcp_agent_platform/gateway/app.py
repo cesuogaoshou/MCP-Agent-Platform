@@ -1,8 +1,10 @@
+import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Protocol
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field, field_validator
 
 from mcp_agent_platform.config.settings import get_settings
@@ -94,6 +96,18 @@ def create_app(
             events=[event.as_dict() for event in result.events or []],
         )
 
+    @app.post("/chat/stream")
+    async def chat_stream(request: ChatRequest) -> StreamingResponse:
+        current_agent = app.state.agent
+        if current_agent is None:
+            raise HTTPException(status_code=503, detail="Agent is not configured")
+
+        result = await current_agent.run(request.message)
+        return StreamingResponse(
+            _iter_sse_events([event.as_dict() for event in result.events or []]),
+            media_type="text/event-stream",
+        )
+
     @app.get("/tools")
     async def tools() -> dict[str, list[dict[str, Any]]]:
         current_registry = app.state.registry
@@ -103,6 +117,13 @@ def create_app(
         return {"tools": await current_registry.list_tools()}
 
     return app
+
+
+async def _iter_sse_events(events: list[dict[str, Any]]) -> AsyncIterator[str]:
+    for event in events:
+        event_type = str(event["type"])
+        data = json.dumps(event, ensure_ascii=False, separators=(",", ":"))
+        yield f"event: {event_type}\ndata: {data}\n\n"
 
 
 app = create_app(enable_runtime=True)

@@ -73,6 +73,14 @@ curl -X POST http://127.0.0.1:8000/chat `
   -d "{\"message\":\"/echo hello\"}"
 ```
 
+以 SSE 格式获取 Agent 执行事件：
+
+```powershell
+curl -N -X POST http://127.0.0.1:8000/chat/stream `
+  -H "Content-Type: application/json" `
+  -d "{\"message\":\"/echo hello\"}"
+```
+
 离线测试搜索工具时，可以启用 fake provider：
 
 ```powershell

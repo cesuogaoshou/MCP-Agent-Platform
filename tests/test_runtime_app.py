@@ -21,3 +21,16 @@ def test_runtime_app_lists_registered_tools(monkeypatch) -> None:
 
     assert response.status_code == 200
     assert [tool["name"] for tool in response.json()["tools"]] == ["echo", "web_search"]
+
+
+def test_runtime_app_streams_chat_events(monkeypatch) -> None:
+    monkeypatch.setenv("MCP_AGENT_SEARCH_PROVIDER", "fake")
+
+    with TestClient(create_app(enable_runtime=True)) as client:
+        response = client.post("/chat/stream", json={"message": "/echo hello"})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert "event: action\n" in response.text
+    assert "event: observation\n" in response.text
+    assert "event: answer\n" in response.text

@@ -45,6 +45,24 @@ def test_chat_endpoint_rejects_empty_message() -> None:
     assert response.status_code == 422
 
 
+def test_chat_stream_endpoint_returns_agent_events_as_sse() -> None:
+    agent = FakeAgent()
+    client = TestClient(create_app(agent=agent))
+
+    response = client.post("/chat/stream", json={"message": "/echo hello"})
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+    assert response.text == (
+        "event: action\n"
+        'data: {"type":"action","message":"Calling tool: echo",'
+        '"data":{"tool_name":"echo","tool_arguments":{"text":"hello"}}}\n\n'
+        "event: answer\n"
+        'data: {"type":"answer","message":"Final answer generated",'
+        '"data":{"answer":"{\\"echo\\": \\"hello\\"}"}}\n\n'
+    )
+
+
 class FakeAgent:
     def __init__(self) -> None:
         self.messages: list[str] = []

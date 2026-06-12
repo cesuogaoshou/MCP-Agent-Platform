@@ -99,6 +99,9 @@ Remove-Item Env:\MCP_AGENT_SEARCH_PROVIDER
 `/chat` 响应会返回 `answer`、工具调用信息和 `events`。`events` 当前包含
 `action`、`observation`、`answer`，后续 Web UI 和 SSE 会基于这些事件展示执行过程。
 
+`/chat` 还会返回 `session_id` 和当前会话的 `messages`。后续请求带上同一个
+`session_id`，后端会在进程内保留最近的用户和助手消息，便于做最小多轮会话演示。
+
 MCP stdio 协议自检：
 
 ```powershell

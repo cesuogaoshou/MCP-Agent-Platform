@@ -2,6 +2,7 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any, Protocol
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
@@ -23,6 +24,7 @@ class ToolRegistryLike(Protocol):
 
 class ChatRequest(BaseModel):
     message: str
+    session_id: str | None = None
 
     @field_validator("message")
     @classmethod
@@ -34,10 +36,12 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
+    session_id: str
     tool_name: str | None = None
     tool_arguments: dict[str, Any] | None = None
     tool_result: dict[str, Any] | None = None
     events: list[dict[str, Any]] = Field(default_factory=list)
+    messages: list[dict[str, str]] = Field(default_factory=list)
 
 
 def create_app(
@@ -72,6 +76,7 @@ def create_app(
     )
     app.state.agent = agent
     app.state.registry = registry
+    app.state.sessions = {}
 
     @app.get("/health")
     async def health() -> dict[str, str]:
@@ -88,12 +93,20 @@ def create_app(
             raise HTTPException(status_code=503, detail="Agent is not configured")
 
         result = await current_agent.run(request.message)
+        session_id, messages = _record_session_turn(
+            sessions=app.state.sessions,
+            requested_session_id=request.session_id,
+            user_message=request.message,
+            assistant_message=result.final_answer,
+        )
         return ChatResponse(
             answer=result.final_answer,
+            session_id=session_id,
             tool_name=result.tool_name,
             tool_arguments=result.tool_arguments,
             tool_result=result.tool_result,
             events=[event.as_dict() for event in result.events or []],
+            messages=messages,
         )
 
     @app.post("/chat/stream")
@@ -124,6 +137,23 @@ async def _iter_sse_events(events: list[dict[str, Any]]) -> AsyncIterator[str]:
         event_type = str(event["type"])
         data = json.dumps(event, ensure_ascii=False, separators=(",", ":"))
         yield f"event: {event_type}\ndata: {data}\n\n"
+
+
+def _record_session_turn(
+    sessions: dict[str, list[dict[str, str]]],
+    requested_session_id: str | None,
+    user_message: str,
+    assistant_message: str,
+) -> tuple[str, list[dict[str, str]]]:
+    session_id = requested_session_id or uuid4().hex
+    messages = sessions.setdefault(session_id, [])
+    messages.extend(
+        [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": assistant_message},
+        ]
+    )
+    return session_id, list(messages)
 
 
 app = create_app(enable_runtime=True)

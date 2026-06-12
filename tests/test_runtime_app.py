@@ -34,3 +34,24 @@ def test_runtime_app_streams_chat_events(monkeypatch) -> None:
     assert "event: action\n" in response.text
     assert "event: observation\n" in response.text
     assert "event: answer\n" in response.text
+
+
+def test_runtime_app_keeps_session_messages(monkeypatch) -> None:
+    monkeypatch.setenv("MCP_AGENT_SEARCH_PROVIDER", "fake")
+
+    with TestClient(create_app(enable_runtime=True)) as client:
+        first_response = client.post("/chat", json={"message": "/echo first"})
+        session_id = first_response.json()["session_id"]
+        second_response = client.post(
+            "/chat",
+            json={"message": "/echo second", "session_id": session_id},
+        )
+
+    assert second_response.status_code == 200
+    assert second_response.json()["session_id"] == session_id
+    assert [message["role"] for message in second_response.json()["messages"]] == [
+        "user",
+        "assistant",
+        "user",
+        "assistant",
+    ]

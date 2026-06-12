@@ -11,8 +11,11 @@ def test_chat_endpoint_runs_configured_agent() -> None:
 
     assert response.status_code == 200
     assert agent.messages == ["/echo hello"]
-    assert response.json() == {
+    payload = response.json()
+    assert payload["session_id"]
+    assert payload == {
         "answer": '{"echo": "hello"}',
+        "session_id": payload["session_id"],
         "tool_name": "echo",
         "tool_arguments": {"text": "hello"},
         "tool_result": {
@@ -34,6 +37,10 @@ def test_chat_endpoint_runs_configured_agent() -> None:
                 "data": {"answer": '{"echo": "hello"}'},
             },
         ],
+        "messages": [
+            {"role": "user", "content": "/echo hello"},
+            {"role": "assistant", "content": '{"echo": "hello"}'},
+        ],
     }
 
 
@@ -43,6 +50,26 @@ def test_chat_endpoint_rejects_empty_message() -> None:
     response = client.post("/chat", json={"message": "   "})
 
     assert response.status_code == 422
+
+
+def test_chat_endpoint_keeps_recent_messages_for_same_session() -> None:
+    client = TestClient(create_app(agent=FakeAgent()))
+
+    first_response = client.post("/chat", json={"message": "/echo first"})
+    session_id = first_response.json()["session_id"]
+    second_response = client.post(
+        "/chat",
+        json={"message": "/echo second", "session_id": session_id},
+    )
+
+    assert second_response.status_code == 200
+    assert second_response.json()["session_id"] == session_id
+    assert second_response.json()["messages"] == [
+        {"role": "user", "content": "/echo first"},
+        {"role": "assistant", "content": '{"echo": "hello"}'},
+        {"role": "user", "content": "/echo second"},
+        {"role": "assistant", "content": '{"echo": "hello"}'},
+    ]
 
 
 def test_chat_stream_endpoint_returns_agent_events_as_sse() -> None:

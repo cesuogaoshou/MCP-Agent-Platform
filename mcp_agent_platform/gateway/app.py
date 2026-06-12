@@ -1,15 +1,19 @@
 import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Protocol
 from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 from mcp_agent_platform.config.settings import get_settings
 from mcp_agent_platform.gateway.runtime import create_default_agent
+
+STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 
 class AgentLike(Protocol):
@@ -74,6 +78,7 @@ def create_app(
         version=settings.version,
         lifespan=lifespan,
     )
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     app.state.agent = agent
     app.state.registry = registry
     app.state.sessions = {}
@@ -85,6 +90,10 @@ def create_app(
             "service": settings.service_name,
             "version": settings.version,
         }
+
+    @app.get("/")
+    async def index() -> FileResponse:
+        return FileResponse(STATIC_DIR / "index.html")
 
     @app.post("/chat")
     async def chat(request: ChatRequest) -> ChatResponse:

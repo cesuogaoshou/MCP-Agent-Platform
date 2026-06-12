@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MCP Agent Platform</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1>MCP Agent Platform</h1>
+          <p>Local MCP tools, agent events, and chat sessions.</p>
+        </div>
+        <div class="status" id="service-status">Checking service</div>
+      </header>
+
+      <main class="workspace">
+        <aside class="tool-panel" aria-label="Available tools">
+          <div class="panel-heading">
+            <h2>Tools</h2>
+            <button id="refresh-tools" type="button">Refresh</button>
+          </div>
+          <div id="tool-list" class="tool-list"></div>
+        </aside>
+
+        <section class="chat-panel" aria-label="Chat">
+          <div id="message-list" class="message-list">
+            <div class="empty-state">
+              <strong>Start with a tool command</strong>
+              <span>Try /echo hello or /search mcp protocol.</span>
+            </div>
+          </div>
+          <form id="chat-form" class="chat-form">
+            <input
+              id="message-input"
+              name="message"
+              type="text"
+              autocomplete="off"
+              value="/echo hello"
+              aria-label="Message"
+            />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+
+        <aside class="event-panel" aria-label="Agent events">
+          <div class="panel-heading">
+            <h2>Events</h2>
+            <span id="session-label">No session</span>
+          </div>
+          <div id="event-list" class="event-list"></div>
+        </aside>
+      </main>
+    </div>
+    <script src="/static/app.js"></script>
+  </body>
+</html>

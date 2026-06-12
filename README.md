@@ -25,6 +25,26 @@ MCP-native Agent 工具调用平台。当前目标是先实现一个简单可运
 2. Agent 能基于工具结果生成回答。
 3. FastAPI + Web UI 能展示 Agent 执行过程。
 
+## 最小架构
+
+```text
+Browser / curl
+    |
+FastAPI Gateway
+    |-- /health
+    |-- /tools
+    |-- /chat
+    |-- /chat/stream
+    |
+ToolCallingAgent
+    |
+ToolRegistry
+    |
+MCP stdio Tool Servers
+    |-- echo
+    |-- web_search
+```
+
 ## 本地开发
 
 创建虚拟环境：
@@ -51,6 +71,12 @@ python -m venv .venv
 
 ```powershell
 .\.venv\Scripts\python.exe -m mcp_agent_platform.gateway
+```
+
+打开 Web UI：
+
+```text
+http://127.0.0.1:8000/
 ```
 
 健康检查：
@@ -151,3 +177,46 @@ asyncio.run(main())
 '@ | .\.venv\Scripts\python.exe -
 Remove-Item Env:\MCP_AGENT_SEARCH_PROVIDER
 ```
+
+## Demo 流程
+
+推荐先用离线搜索模式演示，避免外部网络影响效果：
+
+```powershell
+$env:MCP_AGENT_SEARCH_PROVIDER = "fake"
+.\.venv\Scripts\python.exe -m mcp_agent_platform.gateway
+```
+
+然后打开：
+
+```text
+http://127.0.0.1:8000/
+```
+
+稳定演示问题：
+
+```text
+/echo hello
+/search mcp protocol
+/search agent tool calling
+```
+
+可观察到的效果：
+
+- 左侧展示 `echo`、`web_search` 工具。
+- 中间展示用户输入和助手回答。
+- 右侧展示 Agent events，包括 `action`、`observation`、`answer`。
+- 同一页面连续提问会复用 `session_id`，消息会保留在当前会话中。
+
+演示结束后关闭服务，并清理环境变量：
+
+```powershell
+Remove-Item Env:\MCP_AGENT_SEARCH_PROVIDER
+```
+
+## 当前限制
+
+- Agent 目前是命令式最小实现，不是真正 LLM ReAct。
+- `/chat/stream` 当前是把一次 Agent 运行后的事件按 SSE 输出，不是逐 token 流式生成。
+- 会话记忆是进程内存储，服务重启后会丢失。
+- `web_search` 默认 provider 依赖外部网络；离线演示建议使用 fake provider。
